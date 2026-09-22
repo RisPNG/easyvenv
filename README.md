@@ -1,181 +1,194 @@
 # easyvenv
 
-Named Python virtual environments, available from any directory. Use `venv` to open a small terminal UI, or explicit commands for scripts and everyday terminal work.
+Create and switch between named Python environments from any directory.
 
 ```sh
-venv create myproject           # Use the Python already selected on PATH
-venv create legacy 3.11.14      # Resolve/install Python through mise
-venv use myproject              # Activate in this terminal
-venv run legacy python app.py   # Run without activating
-venv deactivate                # Restore the previous shell environment
+venv create myproject
+venv use myproject
+python app.py
+venv deactivate
 ```
 
-Environments live in `~/.venvs`, or the absolute directory set by `WORKON_HOME`. Your working directory does not affect where environments are stored. Python environments stay at their original locations; “portable” here means the command works from any directory.
+Keep your environments in one place, choose a Python version when you need one, and use either terminal commands or an interactive menu.
 
-## Installation
+## Install
 
-Build from this repository with Go 1.27.1 or the pinned mise toolchain. The installer installs both `easyvenv` and `venv`. It does **not** install mise or Python.
+You need Go 1.27.1 or newer to run the installer. To create environments, you can use Python already installed on your computer or let easyvenv set up a version through mise.
+
+Download this repository, or clone it:
+
+```sh
+git clone https://github.com/RisPNG/easyvenv.git
+cd easyvenv
+```
 
 ### Linux and macOS
 
 ```sh
-# If using mise for development:
-mise trust
-mise install
-
-# Install and enable the venv function in your shell:
 ./install.sh
-# Optional override: --shell bash, --shell zsh, --shell fish, --shell nu
 ```
 
-The installer detects your login shell from `SHELL` (Bash, Zsh, Fish or Nushell). Use `--shell` to choose a different shell. If detection is unavailable or the shell is unsupported, it asks you to supply an override before installing anything.
+The installer detects your login shell from `$SHELL`, installs into `~/.local/bin`, and adds shell setup to your startup file. **Open a new terminal after installation**, then run `venv`.
 
-The default destination is `~/.local/bin`. Use `--bin-dir /absolute/path` to change it. The installer writes an integration file under `${XDG_CONFIG_HOME:-~/.config}/easyvenv` and adds an idempotent source line to the selected shell's startup file. Start a new terminal afterward. It respects `ZDOTDIR` for Zsh.
-
-Use `--no-profile` to install only the binaries and configure activation manually below. Add the destination to `PATH` for direct binary use and scripts. For Bash/Zsh, a typical PATH setting is:
+Bash, Zsh, Fish and Nushell are supported. You can override detection or change the installation location:
 
 ```sh
-export PATH="$HOME/.local/bin:$PATH"
+./install.sh --shell zsh
+./install.sh --bin-dir /your/bin/directory
 ```
 
-### Windows / PowerShell
+Use `--no-profile` if you want to configure your shell yourself.
 
-From the repository, with Go available:
+### Windows / PowerShell
 
 ```powershell
 ./install.ps1
 ```
 
-This installs into `$HOME/.local/bin` and adds integration to `$PROFILE`. Restart PowerShell. Use `-BinDir` to change the destination or `-NoProfile` to skip profile changes. Add the destination to your user PATH for direct binary use and scripts.
+The installer installs into `$HOME/.local/bin` and adds shell setup to your PowerShell profile. **Restart PowerShell**, then run `venv`.
 
-### Manual shell integration
+Use `-BinDir` to change the installation location or `-NoProfile` to configure your shell yourself. PowerShell and Nushell support native Windows environments. If you use Bash, Zsh or Fish inside WSL, follow the Linux instructions inside WSL.
 
-Bash, Zsh and Fish use the Linux/macOS binary. PowerShell and Nushell also support the native Windows binary. For Unix shells inside WSL, install easyvenv inside WSL.
-
-The binary cannot change its parent shell. These commands define a lightweight `venv` function; run one now and add it to your shell's startup file to keep it.
-
-**Bash** (`~/.bashrc`):
-
-```sh
-eval "$(easyvenv activate bash)"
-```
-
-**Zsh** (`~/.zshrc`):
-
-```sh
-eval "$(easyvenv activate zsh)"
-```
-
-**Fish** (`~/.config/fish/config.fish`):
-
-```fish
-easyvenv activate fish | source
-```
-
-**PowerShell** (`$PROFILE`):
-
-```powershell
-(& easyvenv activate pwsh) | Out-String | Invoke-Expression
-```
-
-**Nushell** (its `config.nu`; find the location with `$nu.config-path`):
-
-```nu
-easyvenv activate nu | save --force ~/.config/nushell/easyvenv.nu
-# Add this line to config.nu:
-source ~/.config/nushell/easyvenv.nu
-```
-
-`easyvenv init <shell>` is equivalent to `easyvenv activate <shell>`. Integration embeds the binary's absolute path, so the `venv` function does not depend on your current directory or on Python changing PATH. Reload integration after moving the binary. When replacing the Bash prototype, remove its old `venv()` definition or load easyvenv's integration after it.
-
-Activation sets `VIRTUAL_ENV` and `VIRTUAL_ENV_PROMPT`, prepends the environment's executable directory to `PATH`, and unsets `PYTHONHOME`. Switching replaces the previous easyvenv environment. Deactivation restores the original values, including whether each variable was unset. If you entered easyvenv from another activated environment, deactivation returns to that environment. Prompt formatting is left to your existing shell/theme; themes can use `VIRTUAL_ENV` or `VIRTUAL_ENV_PROMPT`.
-
-## Commands
-
-| Command | Behavior |
-| --- | --- |
-| `venv` | Open the TUI when attached to an interactive terminal; otherwise print help |
-| `venv create <name> [version] [--yes]` | Create with current PATH Python, or mise for an explicit version |
-| `venv use <name> [--yes]` | Activate; offer to create with current Python if missing |
-| `venv deactivate` | Restore the shell state from before easyvenv activation |
-| `venv list [--json]` | List complete environments and mark the current one |
-| `venv inspect <name> [--json]` | Show interpreter, version, location, provenance and creation time when known |
-| `venv delete <name> [--yes]` | Confirm and delete an inactive environment |
-| `venv run <name> <command> [args...]` | Run with the environment's PATH and variables, preserving the working directory, streams and exit status |
-| `easyvenv activate <shell>` | Print shell integration |
-| `venv --help` / `venv --version` | Help / version |
-
-Aliases match the prototype: `make`/`mk`, `activate`/`use`, `exit`/`quit`/`q`, `ls`, and `del`/`remove`/`rm`. `show` aliases `inspect`. The binary's `easyvenv activate bash` configures integration; the shell function's `venv activate bash` activates an environment named `bash`.
-
-Names may contain spaces or Unicode, but must be a single filename without path separators, control characters, Windows-reserved names/characters, a leading dash, or easyvenv's reserved prefix. Quote names with spaces. `WORKON_HOME` must be absolute to keep behavior consistent across directories.
-
-```sh
-venv create 'data science'
-venv run 'data science' python -c 'import sys; print(sys.executable)'
-venv run myproject pytest -q
-venv run myproject -- python script.py --some-flag
-venv list --json
-venv rm oldproject --yes
-```
-
-Destructive actions and implicit creation require confirmation. In noninteractive use, pass `--yes`; easyvenv never reads piped input as approval. `--yes` on creation also approves installing mise if it is missing.
-
-## Python selection and mise
-
-Without a version, easyvenv looks for `python`, then `python3`, on your current PATH, inspects that interpreter, and runs its `-m venv`. It never calls mise in this path. Existing selections from pyenv, asdf, Homebrew, uv, a system installation, or another venv are respected. Python must provide the standard `venv` and `ensurepip` modules; some Linux distributions package these separately.
-
-An explicit version (`3`, `3.11`, `3.11.14`, or `latest`) uses mise. Exact versions are used directly. Partial versions prefer an installed match and otherwise resolve through mise's remote catalog. Python is installed if needed, then creation runs through `mise exec python@<resolved-version> -- python -m venv ...`. No global/project Python settings are changed.
-
-If mise is missing, easyvenv offers to install it at that moment: the official `https://mise.run` installer on Linux/macOS, or `winget install --id jdx.mise` on Windows. Declining leaves the environment uncreated. Existing mise on PATH or at `~/.local/bin/mise` is reused. Python installations belong to mise; deleting a virtual environment never uninstalls Python.
-
-## Terminal UI
-
-The UI uses Bubble Tea and Bubbles. Navigate with the arrow keys; `/` filters environments.
-
-| Key | Action |
-| --- | --- |
-| `n` | Create form; Tab changes fields and Enter submits |
-| Enter | Details |
-| `a` | Activate the selection and close the UI |
-| `d` | Delete confirmation; `y` confirms, `n`/Esc cancels |
-| `r` | Refresh |
-| `q` | Quit from the list |
-| Esc | Return from a form/details/confirmation |
-| Ctrl+C | Cancel a running operation and quit |
-
-Activation from the UI works when launched through the shell's `venv` function. Running the binary directly prints an activation instruction after selection. Installation, resolution, creation, deletion and discovery run as background commands; the UI receives typed result messages.
-
-## Storage and failure behavior
-
-The filesystem is authoritative. Existing environments are discovered from `pyvenv.cfg` and their Python executable even if easyvenv's metadata is absent or damaged. `.easyvenv.json` records provenance, requested version and creation time; listing uses the version in `pyvenv.cfg`.
-
-Creation runs directly at `WORKON_HOME/<name>`, just like the Bash prototype. An exclusive directory creation prevents overwriting existing files. A `.easyvenv-creating` marker keeps incomplete environments out of listing, activation and execution. Successful creation removes the marker; failed creation removes only the newly created directory.
-
-A machine crash or forced kill can leave a marked directory. It stays hidden and cannot be overwritten. Inspect that directory and remove it manually before retrying. Symlinked environment directories are not followed or deleted. Deletion refuses the environment active in the invoking shell; it cannot detect activation in other terminals.
-
-Package installation and dependency management remain with Python tooling (`pip`, `uv pip`, Poetry, PDM, etc.). easyvenv does not solve dependencies, manage lockfiles, or move environments between machines.
-
-## Development
+If you already use mise to manage Go, prepare the repository's toolchain before running either installer:
 
 ```sh
 mise trust
 mise install
-mise exec -- go test ./...
-mise exec -- go vet ./...
-mise exec -- go test -race ./...
-mise run build
 ```
 
-The test suite creates disposable real Python environments, checks executable entry points, metadata-free discovery, failure cleanup, concurrent creation, mise argument handling, CLI behavior, and shell switching/restoration. Shell integration tests run for every supported shell available on PATH. CI covers Linux, macOS and Windows and builds amd64/arm64 binaries.
+The installers also provide an `easyvenv` command for shell setup. Add the installation directory to your `PATH` to use it, or to use `venv` in scripts. For Bash and Zsh with the default location, add this to your startup file:
 
-| Directory | Responsibility |
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+## Everyday use
+
+### Create an environment
+
+```sh
+venv create myproject
+```
+
+This uses your current Python: `python`, or `python3` if `python` is unavailable. Your existing Python setup is respected, whether it comes from your system, Homebrew, pyenv, asdf, uv or mise.
+
+To choose a version:
+
+```sh
+venv create legacy 3.11.14
+```
+
+Supplying a version tells easyvenv to use mise. If mise is missing, easyvenv asks before installing it, then installs the requested Python version if needed. Installing easyvenv itself does not install mise.
+
+You can also request `3`, `3.11` or `latest`. These prefer a matching Python version already installed through mise; otherwise, mise finds an available version.
+
+### Activate or switch environments
+
+```sh
+venv use myproject
+venv use legacy
+venv deactivate
+```
+
+`use` switches your current terminal to that environment. If the name does not exist, easyvenv offers to create it using your current Python. `deactivate` restores your previous environment.
+
+Your prompt's appearance depends on your shell theme. Use `venv list` to see which environment is active.
+
+### Run a command without activating
+
+```sh
+venv run myproject python app.py
+venv run myproject python -m pip install requests
+```
+
+The command runs from your current working directory using the selected environment. easyvenv manages environments; continue using pip or your preferred Python tooling to install packages.
+
+### List, inspect and delete
+
+```sh
+venv list
+venv inspect myproject
+venv delete oldproject
+```
+
+Deletion asks for confirmation. Deactivate an environment before deleting it, and make sure you are finished using it in other terminals too. Deleting an environment removes its installed packages, but keeps the Python version provisioned through mise.
+
+## Interactive menu
+
+Run `venv` without arguments to browse your environments. Use the arrow keys to move and `/` to search.
+
+| Key | Action |
 | --- | --- |
-| `cmd/easyvenv` | Process entrypoint, cancellation and exit status |
-| `internal/environment` | Interpreter selection and environment lifecycle; no UI dependency |
-| `internal/provision` | mise discovery, resolution, installation and execution |
-| `internal/process` | Background subprocess cancellation and descendant cleanup |
-| `internal/shell` | Shell wrappers and environment deltas |
-| `internal/cli` | Arguments, confirmations and command output |
-| `internal/tui` | Bubble Tea model, view, typed messages and centralized theme |
+| `n` | Create an environment |
+| Enter | View details |
+| `a` | Activate the selected environment and close the menu |
+| `d` | Delete the selected environment after confirmation |
+| `r` | Refresh the list |
+| `q` | Quit |
+| Esc | Go back |
+| Ctrl+C | Cancel the current operation and quit |
 
-The implementation follows the plan's small service/frontend boundary. Reference material included [Bubble Tea's package-manager example](https://github.com/charmbracelet/bubbletea/tree/main/examples/package-manager), [Crush's UI guidance](https://github.com/charmbracelet/crush/blob/main/internal/ui/AGENTS.md), [Superfile](https://github.com/yorukot/superfile), [mise activation](https://github.com/jdx/mise/blob/main/src/cli/activate.rs), [venv_manager](https://github.com/jacopobonomi/venv_manager), and [UVE](https://github.com/robert-mcdermott/uve). Their larger application architectures and package-management features are outside this tool's scope.
+In the create form, Tab moves between fields and Enter creates the environment. Leave the Python version blank to use your current Python.
+
+## Command reference
+
+| Command | What it does |
+| --- | --- |
+| `venv` | Open the interactive menu; print help when used without a terminal |
+| `venv create <name> [version]` | Create an environment |
+| `venv use <name>` | Activate or switch environments |
+| `venv deactivate` | Return to your previous environment |
+| `venv list [--json]` | List environments |
+| `venv inspect <name> [--json]` | Show an environment's location, Python version and creation details |
+| `venv delete <name>` | Delete an environment |
+| `venv run <name> <command> [args...]` | Run a command in an environment |
+| `venv --help` | Show help |
+| `venv --version` | Show the installed version |
+
+Shortcuts are available: `make` or `mk` for `create`; `activate` for `use`; `exit`, `quit` or `q` for `deactivate`; `ls` for `list`; `show` for `inspect`; and `del`, `remove` or `rm` for `delete`.
+
+For scripts, use `--yes` with `create`, `use` or `delete` to approve any confirmation. This also approves installing mise when a requested Python version needs it.
+
+```sh
+venv create legacy 3.11.14 --yes
+venv list --json
+venv rm oldproject --yes
+```
+
+## Where environments are stored
+
+Environments live in `~/.venvs`, so `venv use myproject` works whether you are in a project folder, your home directory or somewhere else.
+
+To use another location, set `WORKON_HOME` to an absolute path in your shell's startup file. For example, in Bash or Zsh:
+
+```sh
+export WORKON_HOME="$HOME/python-environments"
+```
+
+Changing this setting selects a different storage location; it does not move existing environments. Keep environments at the paths where they were created.
+
+Use simple names such as `myproject` or `data-science`. Spaces and Unicode are supported; quote names containing spaces. Names cannot contain path separators, reserved filename characters, or start with a dash or `.easyvenv`.
+
+## Manual shell setup
+
+Skip this section if the installer already configured your shell. Otherwise, ensure `easyvenv` is on `PATH`, then add the appropriate line to your startup file:
+
+| Shell | Startup file | Setup |
+| --- | --- | --- |
+| Bash | `~/.bashrc` | `eval "$(easyvenv activate bash)"` |
+| Zsh | `~/.zshrc`, or the file under `ZDOTDIR` | `eval "$(easyvenv activate zsh)"` |
+| Fish | `~/.config/fish/config.fish` | `easyvenv activate fish \| source` |
+| PowerShell | `$PROFILE` | `(& easyvenv activate pwsh) \| Out-String \| Invoke-Expression` |
+
+For Nushell, save the output of `easyvenv activate nu` to a file and add a `source` line for that file to your `config.nu`. Run `$nu.config-path` to find your configuration file.
+
+Restart your terminal afterward. `easyvenv init <shell>` is an alternative spelling for these setup commands.
+
+## Troubleshooting
+
+- **`venv` is not found:** open a new terminal after installation. For scripts or manual setup, check that the installation directory is on `PATH`.
+- **Activation asks for shell integration:** follow the manual setup above. Activation from the interactive menu also needs this setup.
+- **An older `venv` command still runs:** remove or rename any existing `venv` alias or function in your shell configuration, then restart the terminal.
+- **Python is not found:** install/select Python first, or supply a version such as `venv create myproject 3.11` to use mise.
+- **Python reports a missing `venv` or `ensurepip` module:** install your distribution's Python virtual-environment support package, or create the environment with a version provisioned through mise.
+- **A failed creation left a folder behind:** ordinary failures are cleaned up automatically. After a crash or forced termination, check `WORKON_HOME` for the affected folder. A folder containing `.easyvenv-creating` is unfinished; remove that partial folder before retrying.
