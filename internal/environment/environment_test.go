@@ -101,15 +101,40 @@ func TestRealEnvironmentLifecycle(t *testing.T) {
 		t.Fatalf("metadata: %+v", env)
 	}
 	output.Reset()
-	err = service.Run(context.Background(), env.Name, []string{"python", "-c", `import os,sys; assert sys.prefix == os.environ['VIRTUAL_ENV']; print(sys.prefix)`}, nil, &output, &output)
-	if err != nil || strings.TrimSpace(output.String()) != env.Path {
+	err = service.Run(context.Background(), env.Name, []string{"python", "-c", `import os,sys; assert os.path.samefile(sys.prefix, os.environ['VIRTUAL_ENV']), (sys.executable, sys.prefix, os.environ['VIRTUAL_ENV']); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix); print(sys.prefix)`}, nil, &output, &output)
+	if err != nil {
 		t.Fatalf("run: %v: %s", err, &output)
+	}
+	prefixInfo, err := os.Stat(strings.TrimSpace(output.String()))
+	if err != nil {
+		t.Fatalf("inspect Python prefix %q: %v", output.String(), err)
+	}
+	envInfo, err := os.Stat(env.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(prefixInfo, envInfo) {
+		t.Fatalf("Python prefix %q is not environment %q", strings.TrimSpace(output.String()), env.Path)
 	}
 	output.Reset()
 	if err := service.Run(context.Background(), env.Name, []string{"pip", "--version"}, nil, &output, &output); err != nil {
 		t.Fatalf("pip entrypoint: %v: %s", err, &output)
 	}
-	if !strings.Contains(output.String(), env.Path) {
+	_, location, found := strings.Cut(output.String(), " from ")
+	pipPath, _, versionFound := strings.Cut(location, " (python ")
+	if !found || !versionFound {
+		t.Fatalf("unexpected pip version output: %s", &output)
+	}
+	pipPath, err = filepath.EvalSymlinks(pipPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	envPath, err := filepath.EvalSymlinks(env.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(envPath, pipPath)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(os.PathSeparator)) {
 		t.Fatalf("pip resolved outside environment: %s", &output)
 	}
 	if _, err := service.Create(context.Background(), env.Name, python, io.Discard); !errors.Is(err, os.ErrExist) {
@@ -255,5 +280,47 @@ func TestCancelledCreationCleansUp(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(service.Root, "cancelled")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatal("cancelled environment remains")
+	}
+}
+
+func TestEnvironmentThroughStorageAlias(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix storage alias regression")
+	}
+	root := t.TempDir()
+	storage := filepath.Join(root, "storage")
+	if err := os.Mkdir(storage, 0755); err != nil {
+		t.Fatal(err)
+	}
+	alias := filepath.Join(root, "alias")
+	if err := os.Symlink(storage, alias); err != nil {
+		t.Fatal(err)
+	}
+	service := &Service{Root: alias}
+	python, err := service.ResolvePython(context.Background(), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	env, err := service.Create(context.Background(), "project", python, &output)
+	if err != nil {
+		t.Fatalf("create through alias: %v: %s", err, &output)
+	}
+	canonical, err := filepath.EvalSymlinks(env.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	output.Reset()
+	err = service.Run(context.Background(), env.Name, []string{filepath.Join(canonical, "bin", "python"), "-c", `import os,sys; expected = os.environ['VIRTUAL_ENV']; assert sys.prefix != expected, (sys.prefix, expected); assert os.path.samefile(sys.prefix, expected), (sys.executable, sys.prefix, expected); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix)`}, nil, &output, &output)
+	if err != nil {
+		t.Fatalf("run through canonical path: %v: %s", err, &output)
+	}
+	t.Setenv("VIRTUAL_ENV", canonical)
+	env, err = service.Inspect(env.Name)
+	if err != nil || !env.Active {
+		t.Fatalf("active environment through alias: %+v: %v", env, err)
+	}
+	if err := service.Delete(env.Name); err == nil {
+		t.Fatal("deleted active environment accessed through an alias")
 	}
 }

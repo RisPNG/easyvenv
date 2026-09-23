@@ -120,7 +120,7 @@ original_path="$PATH"
 eval "$("$BIN" init "$TEST_SHELL")"
 venv use first
 [ "$VIRTUAL_ENV" = "$WORKON_HOME/first" ]
-python -c 'import sys,os; assert sys.prefix == os.environ["VIRTUAL_ENV"]'
+python -c 'import sys,os; assert os.path.samefile(sys.prefix, os.environ["VIRTUAL_ENV"]), (sys.executable, sys.prefix, os.environ["VIRTUAL_ENV"]); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix)'
 cd "$OTHER_DIR"
 venv use second --yes
 [ "$VIRTUAL_ENV" = "$WORKON_HOME/second" ]
@@ -143,7 +143,7 @@ venv rm second --yes
 $BIN init fish | source
 venv use first; or exit 30
 test "$VIRTUAL_ENV" = "$WORKON_HOME/first"; or exit 31
-python -c 'import sys,os; assert sys.prefix == os.environ["VIRTUAL_ENV"]'; or exit 32
+python -c 'import sys,os; assert os.path.samefile(sys.prefix, os.environ["VIRTUAL_ENV"]), (sys.executable, sys.prefix, os.environ["VIRTUAL_ENV"]); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix)'; or exit 32
 cd "$OTHER_DIR"
 venv use second --yes; or exit 33
 venv use missing; and exit 34
@@ -161,7 +161,7 @@ $originalPath = $env:PATH
 (& $env:BIN init pwsh) | Out-String | Invoke-Expression
 venv use first
 if ($LASTEXITCODE -ne 0 -or $env:VIRTUAL_ENV -ne (Join-Path $env:WORKON_HOME first)) { exit 31 }
-python -c 'import sys,os; assert sys.prefix == os.environ["VIRTUAL_ENV"]'
+python -c 'import sys,os; assert os.path.samefile(sys.prefix, os.environ["VIRTUAL_ENV"]), (sys.executable, sys.prefix, os.environ["VIRTUAL_ENV"]); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix)'
 if ($LASTEXITCODE -ne 0) { exit 32 }
 Set-Location $env:OTHER_DIR
 venv use second --yes
@@ -185,7 +185,7 @@ exit $LASTEXITCODE
 let original_path = $env.PATH
 venv use first
 if $env.VIRTUAL_ENV != ($env.WORKON_HOME | path join first) { error make {msg: 'activation failed'} }
-python -c 'import sys,os; assert sys.prefix == os.environ["VIRTUAL_ENV"]'
+python -c 'import sys,os; assert os.path.samefile(sys.prefix, os.environ["VIRTUAL_ENV"]), (sys.executable, sys.prefix, os.environ["VIRTUAL_ENV"]); assert sys.prefix != sys.base_prefix, (sys.prefix, sys.base_prefix)'
 cd $env.OTHER_DIR
 venv use second --yes
 venv deactivate
