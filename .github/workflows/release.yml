@@ -1,0 +1,51 @@
+name: release
+on:
+  push:
+    tags: ['v[0-9]*']
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+    with:
+      version: ${{ github.ref_name }}
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v3
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: easyvenv-*
+          path: artifacts
+      - name: Package release binaries
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          for platform in linux darwin windows; do
+            for architecture in amd64 arm64; do
+              stage="artifacts/easyvenv-$platform-$architecture"
+              if [ "$platform" = windows ]; then
+                zip -q -j "dist/easyvenv-$platform-$architecture.zip" "$stage/easyvenv.exe" "$stage/venv.exe"
+              else
+                chmod 755 "$stage/easyvenv" "$stage/venv"
+                tar -C "$stage" -czf "dist/easyvenv-$platform-$architecture.tar.gz" easyvenv venv
+              fi
+            done
+          done
+          cd dist
+          sha256sum easyvenv-* > checksums.txt
+      - name: Render package files
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: mise exec -- go run ./packaging --version "$VERSION" --checksums dist/checksums.txt --output package-files
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-files
+          path: package-files/
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.ref_name }}
+        run: gh release create "$VERSION" dist/* --verify-tag --title "easyvenv $VERSION" --generate-notes

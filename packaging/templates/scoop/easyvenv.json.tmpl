@@ -1,0 +1,40 @@
+{
+    "version": "{{.Version}}",
+    "description": "Manage named Python virtual environments",
+    "homepage": "https://github.com/RisPNG/easyvenv",
+    "license": "0BSD",
+    "architecture": {
+        "64bit": {
+            "url": "{{.ReleaseURL}}/easyvenv-windows-amd64.zip",
+            "hash": "{{.WindowsAMD64SHA}}"
+        },
+        "arm64": {
+            "url": "{{.ReleaseURL}}/easyvenv-windows-arm64.zip",
+            "hash": "{{.WindowsARM64SHA}}"
+        }
+    },
+    "bin": ["easyvenv.exe", "venv.exe"],
+    "notes": [
+        "For activation, add '(& easyvenv init pwsh) | Out-String | Invoke-Expression' to your PowerShell profile, then restart PowerShell.",
+        "If your profile is blocked by Restricted policy, run Set-ExecutionPolicy -Scope CurrentUser RemoteSigned or follow your organization's policy."
+    ],
+    "checkver": "github",
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/RisPNG/easyvenv/releases/download/v$version/easyvenv-windows-amd64.zip",
+                "hash": {
+                    "url": "https://github.com/RisPNG/easyvenv/releases/download/v$version/checksums.txt",
+                    "find": "(?m)^([A-Fa-f0-9]{64})[ \\t]+\\*?easyvenv-windows-amd64\\.zip$"
+                }
+            },
+            "arm64": {
+                "url": "https://github.com/RisPNG/easyvenv/releases/download/v$version/easyvenv-windows-arm64.zip",
+                "hash": {
+                    "url": "https://github.com/RisPNG/easyvenv/releases/download/v$version/checksums.txt",
+                    "find": "(?m)^([A-Fa-f0-9]{64})[ \\t]+\\*?easyvenv-windows-arm64\\.zip$"
+                }
+            }
+        }
+    }
+}

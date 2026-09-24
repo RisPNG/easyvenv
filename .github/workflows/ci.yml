@@ -1,7 +1,13 @@
 name: ci
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: dev
 permissions:
   contents: read
 jobs:
@@ -20,6 +26,17 @@ jobs:
       - name: Install additional shells
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y fish zsh
+      - name: Check Unix installer syntax
+        if: runner.os != 'Windows'
+        run: sh -n install.sh
+      - name: Check PowerShell installer syntax
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD 'install.ps1'), [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors) { $parseErrors | Format-List; exit 1 }
       - run: mise exec -- go test ./...
       - run: mise exec -- go vet ./...
       - run: mise exec -- go build ./cmd/easyvenv
@@ -40,11 +57,12 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: '0'
+          VERSION: ${{ inputs.version || 'dev' }}
         run: |
           suffix=''
           if [ "$GOOS" = windows ]; then suffix='.exe'; fi
           mkdir -p dist
-          mise exec -- go build -trimpath -o "dist/easyvenv$suffix" ./cmd/easyvenv
+          mise exec -- go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/easyvenv$suffix" ./cmd/easyvenv
           cp "dist/easyvenv$suffix" "dist/venv$suffix"
       - uses: actions/upload-artifact@v4
         with:

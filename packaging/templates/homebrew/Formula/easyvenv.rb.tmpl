@@ -1,0 +1,46 @@
+class Easyvenv < Formula
+  desc "Manage named Python virtual environments"
+  homepage "https://github.com/RisPNG/easyvenv"
+  license "0BSD"
+  version "{{.Version}}"
+
+  on_macos do
+    on_arm do
+      url "{{.ReleaseURL}}/easyvenv-darwin-arm64.tar.gz"
+      sha256 "{{.DarwinARM64SHA}}"
+    end
+
+    on_intel do
+      url "{{.ReleaseURL}}/easyvenv-darwin-amd64.tar.gz"
+      sha256 "{{.DarwinAMD64SHA}}"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "{{.ReleaseURL}}/easyvenv-linux-arm64.tar.gz"
+      sha256 "{{.LinuxARM64SHA}}"
+    end
+
+    on_intel do
+      url "{{.ReleaseURL}}/easyvenv-linux-amd64.tar.gz"
+      sha256 "{{.LinuxAMD64SHA}}"
+    end
+  end
+
+  def install
+    bin.install "easyvenv", "venv"
+  end
+
+  def caveats
+    <<~EOS
+      To activate environments in Zsh, add this line to ~/.zshrc:
+        eval "$(easyvenv init zsh)"
+      Other shells are documented at https://github.com/RisPNG/easyvenv#manual-shell-setup.
+    EOS
+  end
+
+  test do
+    assert_match version.to_s, shell_output("#{bin}/easyvenv --version")
+  end
+end

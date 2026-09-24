@@ -13,28 +13,21 @@ Keep your environments in one place, choose a Python version when you need one, 
 
 ## Install
 
-You need Go 1.27.1 or newer to run the installer. To create environments, you can use Python already installed on your computer or let easyvenv set up a version through mise.
-
-Download this repository, or clone it:
-
-```sh
-git clone https://github.com/RisPNG/easyvenv.git
-cd easyvenv
-```
+The installers download a prebuilt release. You do not need to clone this repository or install Go. To create environments, use Python already on your computer or choose a version for easyvenv to set up through mise.
 
 ### Linux and macOS
 
 ```sh
-./install.sh
+curl -fsSL https://raw.githubusercontent.com/RisPNG/easyvenv/main/install.sh | sh
 ```
 
-The installer detects your login shell from `$SHELL`, installs into `~/.local/bin`, and adds shell setup to your startup file. **Open a new terminal after installation**, then run `venv`.
+The installer detects your login shell from `$SHELL`, verifies the release download, installs into `~/.local/bin`, and adds that directory and shell setup to your startup file. **Open a new terminal after installation**, then run `venv`.
 
 Bash, Zsh, Fish and Nushell are supported. You can override detection or change the installation location:
 
 ```sh
-./install.sh --shell zsh
-./install.sh --bin-dir /your/bin/directory
+curl -fsSL https://raw.githubusercontent.com/RisPNG/easyvenv/main/install.sh | sh -s -- --shell zsh
+curl -fsSL https://raw.githubusercontent.com/RisPNG/easyvenv/main/install.sh | sh -s -- --bin-dir /your/bin/directory
 ```
 
 Use `--no-profile` if you want to configure your shell yourself.
@@ -42,25 +35,18 @@ Use `--no-profile` if you want to configure your shell yourself.
 ### Windows / PowerShell
 
 ```powershell
-./install.ps1
+irm https://raw.githubusercontent.com/RisPNG/easyvenv/main/install.ps1 | iex
 ```
 
-The installer installs into `$HOME/.local/bin` and adds shell setup to your PowerShell profile. **Restart PowerShell**, then run `venv`.
+The installer verifies the release download, installs into `$HOME/.local/bin`, adds that directory to your user `PATH`, and loads the shell setup in your current PowerShell session. It also adds shell setup to your PowerShell profile for future sessions.
 
-Use `-BinDir` to change the installation location or `-NoProfile` to configure your shell yourself. PowerShell and Nushell support native Windows environments. If you use Bash, Zsh or Fish inside WSL, follow the Linux instructions inside WSL.
+On Windows, PowerShell may block profile loading under the default `Restricted` execution policy. If the installer warns about this, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` to allow the shell integration to load in future sessions.
 
-If you already use mise to manage Go, prepare the repository's toolchain before running either installer:
+If you save the script first, use `-BinDir` to change the installation location or `-NoProfile` to configure your shell yourself. PowerShell and Nushell support native Windows environments; the installer configures PowerShell. If you use Bash, Zsh or Fish inside WSL, follow the Linux instructions inside WSL.
 
-```sh
-mise trust
-mise install
-```
+The installers provide both `venv` and `easyvenv`. For scripts, open a new shell so the installation directory is on `PATH`. Installing easyvenv does not install mise; easyvenv offers to install it only when you request a Python version.
 
-The installers also provide an `easyvenv` command for shell setup. Add the installation directory to your `PATH` to use it, or to use `venv` in scripts. For Bash and Zsh with the default location, add this to your startup file:
-
-```sh
-export PATH="$HOME/.local/bin:$PATH"
-```
+Homebrew and Scoop packages are also being prepared. Their install commands will be documented once those packages are published.
 
 ## Everyday use
 
